@@ -4,7 +4,10 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from utils import generate_thompson_sampling
+from utils import generate_thompson_sampling, generate_grpo, generate_greedy
+from minilang import miniLangShuffle
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def reinforce(num_blocks, block_size, model, policy=generate_thompson_sampling, num_episodes=1000, lr=0.001):
     '''
