@@ -1,6 +1,6 @@
 from minilang import miniLangShuffle
 from model import MiniLM
-from utils import generate_compositional, generate_greedy, generate_grpo, generate_thompson_sampling
+from utils import generate_compositional, generate_greedy, generate
 from algorithms import reinforce, grpo_reinforce, soft_reinforce
 import argparse
 import torch

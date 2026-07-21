@@ -28,28 +28,28 @@ def generate_greedy(observation, model):
 
     return np.array(context[-N:]), log_prob  # return the generated response and its token-wise log probability
 
+# Deprecated
+# def generate_thompson_sampling(observation, model):
+#     '''
+#         same as generate_greedy() but samples from the model's output distribution instead of taking the argmax
+#     '''
+#     N = len(observation)
+#     context = [N] * N + list(observation)
+#     log_prob = torch.zeros(N, dtype=float).to(device)
+#     for i in range(N):
+#         input = torch.LongTensor(context).unsqueeze(0).to(device)  # shape (1, 2N)
+#         output = model(input)  # shape (1, N)
+#         distribution = torch.distributions.Categorical(probs=output[0])
+#         predicted_token = distribution.sample().item()  # sample from the distribution
+#         assert type(predicted_token) == int
+#         log_prob[i] = distribution.log_prob(torch.tensor(predicted_token).to(device))  # accumulate log probability
+#         context = context[1:] + [predicted_token]  # shift context window by 1
+#     return np.array(context[-N:]), log_prob  # return the generated response and its log probability
 
-def generate_thompson_sampling(observation, model):
-    '''
-        same as generate_greedy() but samples from the model's output distribution instead of taking the argmax
-    '''
-    N = len(observation)
-    context = [N] * N + list(observation)
-    log_prob = torch.zeros(N, dtype=float).to(device)
-    for i in range(N):
-        input = torch.LongTensor(context).unsqueeze(0).to(device)  # shape (1, 2N)
-        output = model(input)  # shape (1, N)
-        distribution = torch.distributions.Categorical(probs=output[0])
-        predicted_token = distribution.sample().item()  # sample from the distribution
-        assert type(predicted_token) == int
-        log_prob[i] = distribution.log_prob(torch.tensor(predicted_token).to(device))  # accumulate log probability
-        context = context[1:] + [predicted_token]  # shift context window by 1
-    return np.array(context[-N:]), log_prob  # return the generated response and its log probability
 
-
-def generate_grpo(observation, model, batch_size=16):
+def generate(observation, model, batch_size=16):
     '''
-        same as generate_thompson_sampling but now generates a batch each time
+        generate action from the model's posterior
     '''
     N = len(observation)
     context = np.tile(np.array([N] * N + list(observation)), (batch_size, 1)) # (B, 2 * N)
