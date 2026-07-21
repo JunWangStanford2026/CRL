@@ -98,6 +98,6 @@ if __name__ == "__main__":
     parser.add_argument("--num-blocks", type=int, default=2)
     parser.add_argument("--num-models", type=int, default=32)
     parser.add_argument("--evals-per-model", type=int, default=32)
-    parser.add_argument("--results-dir", type=str, default="results")
+    parser.add_argument("--results-dir", type=str, default="minilang/results")
     args = parser.parse_args()
     main(args)

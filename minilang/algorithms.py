@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from utils import generate_thompson_sampling, generate, generate_greedy
+from utils import generate, generate_greedy
 from minilang import miniLangShuffle
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
