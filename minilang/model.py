@@ -16,13 +16,12 @@ class MiniLM(nn.Module):
         self.hidden_dim = hidden_dim
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
 
-
         # Sinusoidal Position Encoding
         pe = torch.zeros(512, embedding_dim)
         position = torch.arange(0, 512, dtype=torch.float).unsqueeze(1)          # (512, 1)
         div_term = torch.exp(
             torch.arange(0, embedding_dim, 2).float() * (-math.log(10000.0) / embedding_dim)
-        )                                                                          # (embedding_dim/2,)
+        )                                                                         # (embedding_dim/2,)
         pe[:, 0::2] = torch.sin(position * div_term)   # even indices
         pe[:, 1::2] = torch.cos(position * div_term)   # odd indices
         self.register_buffer('positional_encoding', pe.unsqueeze(0))             # (1, 512, embedding_dim)
