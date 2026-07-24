@@ -26,7 +26,7 @@ def main(args):
     print("Running vanilla experiments")
     vanilla_models = []
     vanilla_training_rewards_aggregate, vanilla_training_greedy_rewards_aggregate = np.zeros(args.effective_horizon), np.zeros(args.effective_horizon)
-    for _ in range(args.num_models):
+    for _ in tqdm(range(args.num_models)):
         vanilla_model = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=16).to(device)
         vanilla_training_rewards, vanilla_training_greedy_rewards = reinforce(num_blocks=args.num_blocks, block_size=args.block_size, batch_size=32,
                                             model=vanilla_model, num_episodes=args.effective_horizon, lr=1e-3)
@@ -45,7 +45,7 @@ def main(args):
     print("Evaluating vanilla models")
     vanilla_rewards = np.zeros((args.num_models, args.evals_per_model))
     with open(f"{experiment_dir}/vanilla_eval_logs.txt", "a", encoding="utf-8") as file:
-        for i in range(args.num_models * args.evals_per_model):
+        for i in tqdm(range(args.num_models * args.evals_per_model)):
             vanilla_action = generate_greedy(eval_obs, vanilla_models[i // args.evals_per_model])[0]
             file.write(f"Prompt: {eval_obs}, Response: {vanilla_action}, ")
             vanilla_reward, eval_obs = eval_env.step(vanilla_action)
@@ -58,7 +58,7 @@ def main(args):
     grpo_models = []
     print("Running GRPO Experiments")
     grpo_training_rewards_aggregate, grpo_training_greedy_rewards_aggregate = np.zeros(args.effective_horizon), np.zeros(args.effective_horizon)
-    for _ in range(args.num_models):
+    for _ in tqdm(range(args.num_models)):
         grpo_model = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=16).to(device)
         grpo_training_rewards, grpo_training_greedy_rewards = grpo_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, batch_size=32,
                                                  model=grpo_model, num_episodes=args.effective_horizon, lr=1e-3)

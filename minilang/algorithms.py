@@ -20,7 +20,7 @@ def reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, batch_
     greedy_rewards = []
     rewards = []
 
-    for episode in tqdm(range(num_episodes)):
+    for episode in range(num_episodes):
         optimizer.zero_grad()
         response, log_prob = generate(observation, model, batch_size) # (B, N), (B, N)
         greedy_response, greedy_log_prob = generate_greedy(observation, model)
@@ -46,7 +46,7 @@ def grpo_reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, b
     greedy_rewards = []
     rewards = []
 
-    for episode in tqdm(range(num_episodes)):
+    for episode in range(num_episodes):
         optimizer.zero_grad()
         response, log_prob = generate(observation, model, batch_size) # (B, N), (B, N)
         greedy_response, greedy_log_prob = generate_greedy(observation, model)
@@ -76,7 +76,7 @@ def soft_reinforce(num_blocks, block_size, reward_index, model, alpha=0.1, batch
     greedy_rewards = []
     rewards = []
 
-    for episode in tqdm(range(num_episodes)):
+    for episode in range(num_episodes):
         optimizer.zero_grad()
         response, log_prob = generate(observation, model, batch_size) # (B, N), (B, N)
         greedy_response, greedy_log_prob = generate_greedy(observation, model)
