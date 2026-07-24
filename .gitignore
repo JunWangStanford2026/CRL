@@ -11,3 +11,6 @@ __pycache__/
 # Conda environments
 .env
 .conda
+
+# Experiment results
+minilang/results
