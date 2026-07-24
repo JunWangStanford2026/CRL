@@ -136,7 +136,7 @@ def main(args):
             compositional_action = generate_compositional(eval_obs, model_0s[i // args.evals_per_model], model_1s[i // args.evals_per_model])
             file.write(f"Prompt: {eval_obs}, Response: {compositional_action}, ")
             compositional_reward, eval_obs = eval_env.step(compositional_action)
-            file.write(f"Reward: {compositional_reward}\n")
+            file.write(f"Reward: {np.mean(compositional_reward)}\n")
             compositional_rewards[i // args.evals_per_model, i % args.evals_per_model] = np.mean(compositional_reward)
 
     np.save(f"{experiment_dir}/compositional_rewards.npy", compositional_rewards)
