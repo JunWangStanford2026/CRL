@@ -6,27 +6,43 @@ import argparse
 import torch
 import numpy as np
 import os
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 def main(args):
     print(f"Comparing Monolithic with Compositional with effective horizon {args.effective_horizon}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"using device {device}")
 
-    experiment_dir = f"{args.results_dir}/horizon_{args.effective_horizon}"
+    experiment_dir = f"{args.results_dir}/{args.effective_horizon}_compute_units"
     os.makedirs(experiment_dir, exist_ok=True)
 
     # Evaluation Environment
+    print("Creating simulation environment")
     eval_env = miniLangShuffle(num_blocks=args.num_blocks, block_size=args.block_size)
     eval_obs = eval_env.initialize()
 
     # Vanilla Reinforce
+    print("Running vanilla experiments")
     vanilla_models = []
+    vanilla_training_rewards_aggregate, vanilla_training_greedy_rewards_aggregate = np.zeros(args.effective_horizon), np.zeros(args.effective_horizon)
     for _ in range(args.num_models):
         vanilla_model = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=16).to(device)
         vanilla_training_rewards, vanilla_training_greedy_rewards = reinforce(num_blocks=args.num_blocks, block_size=args.block_size, batch_size=32,
                                             model=vanilla_model, num_episodes=args.effective_horizon, lr=1e-3)
+        vanilla_training_rewards_aggregate += np.array(vanilla_training_rewards)
+        vanilla_training_greedy_rewards_aggregate += np.array(vanilla_training_greedy_rewards)
         vanilla_models.append(vanilla_model)
-        
+
+    plt.clf()
+    plt.plot(vanilla_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
+    plt.plot(vanilla_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.title(f'Vanilla Reinforce ({args.effective_horizon} Compute Units)')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.savefig(f"{experiment_dir}/vanilla_training.png")
+
+    print("Evaluating vanilla models")
     vanilla_rewards = np.zeros((args.num_models, args.evals_per_model))
     with open(f"{experiment_dir}/vanilla_eval_logs.txt", "a", encoding="utf-8") as file:
         for i in range(args.num_models * args.evals_per_model):
@@ -40,12 +56,25 @@ def main(args):
 
     # GRPO Reinforce
     grpo_models = []
+    print("Running GRPO Experiments")
+    grpo_training_rewards_aggregate, grpo_training_greedy_rewards_aggregate = np.zeros(args.effective_horizon), np.zeros(args.effective_horizon)
     for _ in range(args.num_models):
         grpo_model = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=16).to(device)
         grpo_training_rewards, grpo_training_greedy_rewards = grpo_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, batch_size=32,
                                                  model=grpo_model, num_episodes=args.effective_horizon, lr=1e-3)
+        grpo_training_rewards_aggregate += np.array(grpo_training_rewards)
+        grpo_training_greedy_rewards_aggregate += np.array(grpo_training_greedy_rewards)
         grpo_models.append(grpo_model)
 
+    plt.clf()
+    plt.plot(grpo_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
+    plt.plot(grpo_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.title(f'GRPO Reinforce ({args.effective_horizon} Compute Units)')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.savefig(f"{experiment_dir}/grpo_training.png")
+
+    print("Evaluating GRPO models")
     grpo_rewards = np.zeros((args.num_models, args.evals_per_model))
     with open(f"{experiment_dir}/grpo_eval_logs.txt", "a", encoding="utf-8") as file:
         for i in range(args.num_models * args.evals_per_model):
@@ -57,24 +86,50 @@ def main(args):
 
     np.save(f"{experiment_dir}/grpo_rewards.npy", grpo_rewards)
 
+    print("Running compositional experiments")
     # Compositional Reinforce
+    print("Training model for reward 0")
     model_0s = []
+    model_0_training_rewards_aggregate, model_0_training_greedy_rewards_aggregate = np.zeros((args.effective_horizon * 2) // 7), np.zeros((args.effective_horizon * 2) // 7)
     for _ in range(args.num_models):
         model_0 = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=8).to(device)
         model_0_training_rewards, model_0_training_greedy_rewards = soft_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, reward_index=0,
                                                                                    model=model_0, alpha=0.1, batch_size=32,
                                                                                    num_episodes=(args.effective_horizon * 2) // 7, lr=1e-3)
+        model_0_training_rewards_aggregate += np.array(model_0_training_rewards)
+        model_0_training_greedy_rewards_aggregate += np.array(model_0_training_greedy_rewards)
         model_0s.append(model_0)
 
-    
+    plt.clf()
+    plt.plot(model_0_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
+    plt.plot(model_0_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.title(f'Soft Reinforce for Reward 0 ({args.effective_horizon} Compute Units)')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.savefig(f"{experiment_dir}/soft_0_training.png")
+
+
+    print("Training model for reward 1")
     model_1s = []
+    model_1_training_rewards_aggregate, model_1_training_greedy_rewards_aggregate = np.zeros((args.effective_horizon * 12) // 7), np.zeros((args.effective_horizon * 12) // 7)
     for _ in range(args.num_models):
         model_1 = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=8).to(device)
         model_1_training_rewards, model_1_training_greedy_rewards = soft_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, reward_index=1,
                                                                                    model=model_1, alpha=0.1, batch_size=32,
                                                                                    num_episodes=(args.effective_horizon * 12) // 7, lr=1e-3)
+        model_1_training_rewards_aggregate += np.array(model_1_training_rewards)
+        model_1_training_greedy_rewards_aggregate += np.array(model_1_training_greedy_rewards)
         model_1s.append(model_1)
 
+    plt.clf()
+    plt.plot(model_1_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
+    plt.plot(model_1_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.title(f'Soft Reinforce for Reward 1 ({args.effective_horizon} Compute Units)')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.savefig(f"{experiment_dir}/soft_1_training.png")
+
+    print("Evaluate compositional models")
     compositional_rewards = np.zeros((args.num_models, args.evals_per_model))
     with open(f"{experiment_dir}/compositional_eval_logs.txt", "a", encoding="utf-8") as file:
         for i in range(args.num_models * args.evals_per_model):
