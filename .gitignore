@@ -1,0 +1,13 @@
+# Log files
+*.out
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Conda environments
+.env
+.conda
