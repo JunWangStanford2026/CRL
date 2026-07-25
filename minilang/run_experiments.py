@@ -140,6 +140,7 @@ def main(args):
             compositional_rewards[i // args.evals_per_model, i % args.evals_per_model] = np.mean(compositional_reward)
 
     np.save(f"{experiment_dir}/compositional_rewards.npy", compositional_rewards)
+    print("Finished!")
 
     
 
