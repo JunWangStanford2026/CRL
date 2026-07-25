@@ -35,11 +35,12 @@ def main(args):
         vanilla_models.append(vanilla_model)
 
     plt.clf()
-    plt.plot(vanilla_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
-    plt.plot(vanilla_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.plot(vanilla_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward', alpha=0.5)
+    plt.plot(vanilla_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward', alpha=0.5)
     plt.title(f'Vanilla Reinforce ({args.effective_horizon} Compute Units)')
     plt.xlabel('Episode')
     plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.legend()
     plt.savefig(f"{experiment_dir}/vanilla_training.png")
 
     print("Evaluating vanilla models")
@@ -67,11 +68,12 @@ def main(args):
         grpo_models.append(grpo_model)
 
     plt.clf()
-    plt.plot(grpo_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
-    plt.plot(grpo_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.plot(grpo_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward', alpha=0.5)
+    plt.plot(grpo_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward', alpha=0.5)
     plt.title(f'GRPO Reinforce ({args.effective_horizon} Compute Units)')
     plt.xlabel('Episode')
     plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.legend()
     plt.savefig(f"{experiment_dir}/grpo_training.png")
 
     print("Evaluating GRPO models")
@@ -101,11 +103,12 @@ def main(args):
         model_0s.append(model_0)
 
     plt.clf()
-    plt.plot(model_0_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
-    plt.plot(model_0_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.plot(model_0_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward', alpha=0.5)
+    plt.plot(model_0_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward', alpha=0.5)
     plt.title(f'Soft Reinforce for Reward 0 ({args.effective_horizon} Compute Units)')
     plt.xlabel('Episode')
     plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.legend()
     plt.savefig(f"{experiment_dir}/soft_0_training.png")
 
 
@@ -122,11 +125,12 @@ def main(args):
         model_1s.append(model_1)
 
     plt.clf()
-    plt.plot(model_1_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward')
-    plt.plot(model_1_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward')
+    plt.plot(model_1_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward', alpha=0.5)
+    plt.plot(model_1_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward', alpha=0.5)
     plt.title(f'Soft Reinforce for Reward 1 ({args.effective_horizon} Compute Units)')
     plt.xlabel('Episode')
     plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.legend()
     plt.savefig(f"{experiment_dir}/soft_1_training.png")
 
     print("Evaluate compositional models")
@@ -140,6 +144,7 @@ def main(args):
             compositional_rewards[i // args.evals_per_model, i % args.evals_per_model] = np.mean(compositional_reward)
 
     np.save(f"{experiment_dir}/compositional_rewards.npy", compositional_rewards)
+    print("Finished!")
 
     
 
