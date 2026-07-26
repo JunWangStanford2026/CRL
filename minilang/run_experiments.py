@@ -79,7 +79,7 @@ def main(args):
     print("Evaluating GRPO models")
     grpo_rewards = np.zeros((args.num_models, args.evals_per_model))
     with open(f"{experiment_dir}/grpo_eval_logs.txt", "a", encoding="utf-8") as file:
-        for i in range(args.num_models * args.evals_per_model):
+        for i in tqdm(range(args.num_models * args.evals_per_model)):
             grpo_action = generate_greedy(eval_obs, grpo_models[i // args.evals_per_model])[0]
             file.write(f"Prompt: {eval_obs}, Response: {grpo_action}, ")
             grpo_reward, eval_obs = eval_env.step(grpo_action)
@@ -93,7 +93,7 @@ def main(args):
     print("Training model for reward 0")
     model_0s = []
     model_0_training_rewards_aggregate, model_0_training_greedy_rewards_aggregate = np.zeros((args.effective_horizon * 2) // 7), np.zeros((args.effective_horizon * 2) // 7)
-    for _ in range(args.num_models):
+    for _ in tqdm(range(args.num_models)):
         model_0 = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=8).to(device)
         model_0_training_rewards, model_0_training_greedy_rewards = soft_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, reward_index=0,
                                                                                    model=model_0, alpha=0.1, batch_size=32,
@@ -115,7 +115,7 @@ def main(args):
     print("Training model for reward 1")
     model_1s = []
     model_1_training_rewards_aggregate, model_1_training_greedy_rewards_aggregate = np.zeros((args.effective_horizon * 12) // 7), np.zeros((args.effective_horizon * 12) // 7)
-    for _ in range(args.num_models):
+    for _ in tqdm(range(args.num_models)):
         model_1 = MiniLM(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=8, hidden_dim=8).to(device)
         model_1_training_rewards, model_1_training_greedy_rewards = soft_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, reward_index=1,
                                                                                    model=model_1, alpha=0.1, batch_size=32,
@@ -136,7 +136,7 @@ def main(args):
     print("Evaluate compositional models")
     compositional_rewards = np.zeros((args.num_models, args.evals_per_model))
     with open(f"{experiment_dir}/compositional_eval_logs.txt", "a", encoding="utf-8") as file:
-        for i in range(args.num_models * args.evals_per_model):
+        for i in tqdm(range(args.num_models * args.evals_per_model)):
             compositional_action = generate_compositional(eval_obs, model_0s[i // args.evals_per_model], model_1s[i // args.evals_per_model])
             file.write(f"Prompt: {eval_obs}, Response: {compositional_action}, ")
             compositional_reward, eval_obs = eval_env.step(compositional_action)
