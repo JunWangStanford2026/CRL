@@ -76,6 +76,7 @@ class MiniLMHRA(nn.Module):
     def forward(self, x):
         '''
         x has shape (B, 2N)
+        output probability values that sum to 1: (B, num_output_heads, vocab_size)
         '''
         B = x.size(0)
         embedded = self.embedding(x) + self.positional_encoding[:, :x.size(1), :]

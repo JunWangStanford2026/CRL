@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from utils import generate, generate_greedy
+from utils import generate, generate_greedy, generate_hra, generate_greedy_hra
 from minilang import miniLangShuffle
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, batch_size=32):
     '''
     Update rule: theta += lr * reward * grad(log_prob(response))
-    returns: a list of rewards obtained in each episode
+    returns: a list of rewards obtained in each episode, greedy and stochastic
     '''
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     env = miniLangShuffle(num_blocks, block_size)
@@ -38,7 +38,7 @@ def reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, batch_
 def grpo_reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, batch_size=32):
     '''
     Update rule: theta += lr * (reward - GRPO Baseline) * grad(log_prob(response))
-    returns: a list of rewards obtained in each episode
+    returns: a list of rewards obtained in each episode, greedy and stochastic
     '''
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     env = miniLangShuffle(num_blocks, block_size)
@@ -63,10 +63,45 @@ def grpo_reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, b
     return rewards, greedy_rewards
 
 
+def hra_reinforce(num_blocks, block_size, model, num_reward_components=2, batch_size=32, num_episodes=1000, lr=0.001):
+    '''
+    Update rule: per reward component, theta += lr * (reward - GRPO Baseline) * grad(log_prob(response))
+    returns: a list of rewards obtained in each episode, greedy and stochastic
+    '''
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    env = miniLangShuffle(num_blocks, block_size)
+    observation = env.initialize()
+    greedy_rewards = []
+    rewards = []
+
+    for episode in range(num_episodes):
+        optimizer.zero_grad()
+        response, log_prob = generate_hra(observation, model, num_reward_components, batch_size) # (B, N), (B, num_reward_components, N)
+        greedy_response, greedy_log_prob = generate_greedy_hra(observation, model, num_reward_components)
+        greedy_reward = np.mean(env.inspect_reward(greedy_response))
+        greedy_rewards.append(greedy_reward)
+        reward, observation = env.step(response) # reward is (B, N)
+        rewards.append(np.mean(reward))
+        reward_by_head =  np.zeros((batch_size, num_reward_components, response.shape[1])) # (B, num_reward_components, N)
+
+        for head in range(num_reward_components):
+            reward_by_head[:, head, head * block_size : (head + 1) * block_size] = reward[:, head * block_size : (head + 1) * block_size]
+
+        baselined_reward = reward_by_head - (np.sum(reward_by_head, axis=0, keepdims=True) - reward_by_head) / (batch_size - 1)
+        baselined_reward = torch.tensor(baselined_reward, dtype=torch.float, requires_grad=False).to(device)
+        loss = -torch.sum(baselined_reward * log_prob.to(device)) # negative for gradient descent
+        loss.backward()
+        optimizer.step()
+
+    return rewards, greedy_rewards
+        
+
+
+
 def soft_reinforce(num_blocks, block_size, reward_index, model, alpha=0.1, batch_size=32, num_episodes=1000, lr=0.001, seed=None):
     '''
-    Update rule: theta += lr * (reward - alpha * (log_prob(response) + 1)) * grad(log_prob(response))
-    returns: a list of rewards obtained in each episode
+    Update rule: theta += lr * ((reward - alpha * (log_prob(response) + 1)) - soft GRPO baseline) * grad(log_prob(response))
+    returns: a list of rewards obtained in each episode, greedy and stochastic
     '''
     assert reward_index in range(num_blocks)
 

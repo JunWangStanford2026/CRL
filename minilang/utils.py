@@ -67,6 +67,63 @@ def generate(observation, model, batch_size=16):
     return np.array(context[:, -N:]), log_prob  # return the generated response (B, N) and their log probabilities (B,)
 
 
+def generate_greedy_hra(observation, model, num_output_heads):
+    '''
+    observation is a length-N sequence containing tokens in {0, 1, ..., N - 1}
+    'N' is a special token used for padding
+    model is a PyTorch model whose output has shape (1, num_output_heads, N), containing the predicted probabilities of various heads for the next token over {0, 1, ..., N - 1}
+    returns a tuple (response, log probability of response)
+    '''
+
+    # prepend the observation with padding of N's to ensure context always contains full observation
+    N = len(observation)
+    context = [N] * N + list(observation)
+
+    # generate response autoregressively
+    # at each time shift context window by 1
+    log_prob = torch.zeros((num_output_heads, N), dtype=float).to(device)
+    for i in range(N):
+        input = torch.LongTensor(context).unsqueeze(0).to(device)  # shape (1, 2N)
+        output_heads = model(input)  # shape (1, num_output_heads, N)
+        output_combined = torch.sum(output_heads, dim=1).squeeze(0) # shape(1, N) -> (N,)
+        assert output_combined.shape == (N,)
+        predicted_token = torch.argmax(output_combined)
+        assert type(predicted_token) == int
+        log_prob[:, i] = torch.log(output_heads[0, :, predicted_token])  # record log probability
+        context = context[1:] + [predicted_token]  # shift context window by 1
+
+    return np.array(context[-N:]), log_prob  # return the generated response and its token-wise log probability
+
+
+def generate_hra(observation, model, num_output_heads, batch_size=32):
+    '''
+    model outputs must be normalized probabilities that sum to 1
+    '''
+
+    # prepend the observation with padding of N's to ensure context always contains full observation
+    N = len(observation)
+    context = np.tile(np.array([N] * N + list(observation)), (batch_size, 1)) # (B, 2 * N)
+    log_prob = torch.zeros((batch_size, num_output_heads, N), dtype=float).to(device)
+
+    for i in range(N):
+        input = torch.LongTensor(context).to(device) # shape (B, 2N)
+        output_heads = model(input) # (B, num_output_heads, N)
+        assert output_heads.shape[1] == num_output_heads
+        output_combined = torch.mean(output_heads, dim=1) # (B, N)
+        distribution = torch.distributions.Categorical(output_combined)
+        predicted_tokens = distribution.sample() # size (B,)
+        assert predicted_tokens.shape == (batch_size,)
+        # for each of B samples, log probs of the selected token based on the probabilities from the different heads, shape (B, num_output_heads)
+        log_prob[:, :, i] = torch.log(output_heads.gather(
+                                        -1, predicted_tokens.view(batch_size, 1, 1).expand(-1, num_output_heads, -1)
+                                    ).squeeze(-1))
+        context = np.concatenate((context[:, 1:], predicted_tokens.cpu().numpy()[:, None]), axis=1) # shift context window by 1
+        assert context.shape == (batch_size, 2 * N)
+
+    return np.array(context[:, -N:]), log_prob
+
+
+
 def generate_compositional(observation, model_0, model_1):
     '''
     model outputs must be normalized probabilities that sum to 1
