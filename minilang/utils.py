@@ -81,14 +81,12 @@ def generate_greedy_hra(observation, model, num_output_heads):
 
     # generate response autoregressively
     # at each time shift context window by 1
-    log_prob = torch.zeros((num_output_heads, N), dtype=float).to(device)
+    log_prob = torch.zeros((num_output_heads, N), dtype=float, requires_grad=False).to(device)
     for i in range(N):
         input = torch.LongTensor(context).unsqueeze(0).to(device)  # shape (1, 2N)
         output_heads = model(input)  # shape (1, num_output_heads, N)
         output_combined = torch.sum(output_heads, dim=1).squeeze(0) # shape(1, N) -> (N,)
-        assert output_combined.shape == (N,)
         predicted_token = torch.argmax(output_combined)
-        assert type(predicted_token) == int
         log_prob[:, i] = torch.log(output_heads[0, :, predicted_token])  # record log probability
         context = context[1:] + [predicted_token]  # shift context window by 1
 

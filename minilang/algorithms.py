@@ -63,7 +63,7 @@ def grpo_reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, b
     return rewards, greedy_rewards
 
 
-def hra_reinforce(num_blocks, block_size, model, num_reward_components=2, batch_size=32, num_episodes=1000, lr=0.001):
+def hra_reinforce(num_blocks, block_size, model, alpha=0.1, num_reward_components=2, batch_size=32, num_episodes=1000, lr=0.001):
     '''
     Update rule: per reward component, theta += lr * (reward - GRPO Baseline) * grad(log_prob(response))
     returns: a list of rewards obtained in each episode, greedy and stochastic
@@ -87,7 +87,10 @@ def hra_reinforce(num_blocks, block_size, model, num_reward_components=2, batch_
         for head in range(num_reward_components):
             reward_by_head[:, head, head * block_size : (head + 1) * block_size] = reward[:, head * block_size : (head + 1) * block_size]
 
-        baselined_reward = reward_by_head - (np.sum(reward_by_head, axis=0, keepdims=True) - reward_by_head) / (batch_size - 1)
+        log_prob_numpy = log_prob.clone().detach().cpu().numpy() # (B, N)
+        reward_by_head = reward_by_head - alpha * log_prob_numpy
+
+        baselined_reward = reward_by_head - ((np.sum(reward_by_head, axis=0, keepdims=True) - reward_by_head) / (batch_size - 1))
         baselined_reward = torch.tensor(baselined_reward, dtype=torch.float, requires_grad=False).to(device)
         loss = -torch.sum(baselined_reward * log_prob.to(device)) # negative for gradient descent
         loss.backward()
@@ -100,7 +103,7 @@ def hra_reinforce(num_blocks, block_size, model, num_reward_components=2, batch_
 
 def soft_reinforce(num_blocks, block_size, reward_index, model, alpha=0.1, batch_size=32, num_episodes=1000, lr=0.001, seed=None):
     '''
-    Update rule: theta += lr * ((reward - alpha * (log_prob(response) + 1)) - soft GRPO baseline) * grad(log_prob(response))
+    Update rule: theta += lr * (reward - alpha * log_prob(response)) - soft GRPO baseline) * grad(log_prob(response))
     returns: a list of rewards obtained in each episode, greedy and stochastic
     '''
     assert reward_index in range(num_blocks)
