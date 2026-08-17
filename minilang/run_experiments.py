@@ -1,7 +1,7 @@
 from minilang import miniLangShuffle
-from model import MiniLM
-from utils import generate_compositional, generate_greedy, generate
-from algorithms import reinforce, grpo_reinforce, soft_reinforce
+from model import MiniLM, MiniLMHRA
+from utils import generate_compositional, generate_greedy, generate, generate_greedy_hra
+from algorithms import reinforce, grpo_reinforce, soft_reinforce, hra_reinforce
 import argparse
 import torch
 import numpy as np
@@ -87,6 +87,40 @@ def main(args):
             grpo_rewards[i // args.evals_per_model, i % args.evals_per_model] = np.mean(grpo_reward)
 
     np.save(f"{experiment_dir}/grpo_rewards.npy", grpo_rewards)
+
+    # HRA Reinforce
+    print("Running HRA experiments")
+    hra_models = []
+    hra_training_rewards_aggregate, hra_training_greedy_rewards_aggregate = np.zeros(args.effective_horizon), np.zeros(args.effective_horizon)
+    for _ in tqdm(range(args.num_models)):
+        hra_model = MiniLMHRA(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=12, hidden_dim=12, num_output_heads=2)
+        hra_training_rewards, hra_training_greedy_rewards = hra_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, batch_size=32,
+                                                                          model=hra_model, num_reward_components=2, num_episodes=args.effective_horizon, lr=1e-3)
+        hra_training_rewards_aggregate += np.array(hra_training_rewards)
+        hra_training_greedy_rewards_aggregate += np.array(hra_training_greedy_rewards)
+        hra_models.append(hra_model)
+
+    plt.clf()
+    plt.plot(hra_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward', alpha=0.5)
+    plt.plot(hra_training_greedy_rewards_aggregate / args.num_models, color='blue', label='Greedy Reward', alpha=0.5)
+    plt.title(f'HRA Reinforce ({args.effective_horizon} Compute Units)')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Averaged Across Experiments)')
+    plt.legend()
+    plt.savefig(f"{experiment_dir}/hra_training.png")
+
+    print("Evaluating HRA models")
+    hra_rewards = np.zeros((args.num_models, args.evals_per_model))
+    with open(f"{experiment_dir}/hra_eval_logs.txt", "a", encoding="utf-8") as file:
+        for i in tqdm(range(args.num_models * args.evals_per_model)):
+            hra_action = generate_greedy_hra(eval_obs, hra_models[i // args.evals_per_model], num_output_heads=2)[0]
+            file.write(f"Prompt: {eval_obs}, Response: {hra_action}, ")
+            hra_reward, eval_obs = eval_env.step(hra_action)
+            file.write(f"Reward: {np.mean(hra_reward)}\n")
+            hra_rewards[i // args.evals_per_model, i % args.evals_per_model] = np.mean(hra_reward)
+
+    np.save(f"{experiment_dir}/hra_rewards.npy", hra_rewards)
+
 
     print("Running compositional experiments")
     # Compositional Reinforce
