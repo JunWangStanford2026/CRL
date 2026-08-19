@@ -93,7 +93,7 @@ def generate_greedy_hra(observation, model, num_output_heads):
     return np.array(context[-N:]), log_prob  # return the generated response and its token-wise log probability
 
 
-def generate_hra(observation, model, num_output_heads, batch_size=32):
+def generate_hra(observation, model, num_output_heads, batch_size=32, epsilon=1e-6):
     '''
     model outputs must be normalized probabilities that sum to 1
     '''
@@ -112,9 +112,12 @@ def generate_hra(observation, model, num_output_heads, batch_size=32):
         predicted_tokens = distribution.sample() # size (B,)
         assert predicted_tokens.shape == (batch_size,)
         # for each of B samples, log probs of the selected token based on the probabilities from the different heads, shape (B, num_output_heads)
+        # the token is sampled from the mean over heads, so an individual head can assign it ~0 probability;
+        # clamp before the log, since log's backward pass (1/p) overflows float32 once p reaches the denormal
+        # range (~1e-38) and turns every gradient into NaN. clamped entries pass zero gradient.
         log_prob[:, :, i] = torch.log(output_heads.gather(
                                         -1, predicted_tokens.view(batch_size, 1, 1).expand(-1, num_output_heads, -1)
-                                    ).squeeze(-1))
+                                    ).squeeze(-1).clamp_min(epsilon))
         context = np.concatenate((context[:, 1:], predicted_tokens.cpu().numpy()[:, None]), axis=1) # shift context window by 1
         assert context.shape == (batch_size, 2 * N)
 
