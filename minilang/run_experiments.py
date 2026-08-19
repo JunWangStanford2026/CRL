@@ -102,7 +102,7 @@ def main(args):
 
     plt.clf()
     plt.plot(hra_training_rewards_aggregate / args.num_models, color='blue', label='Stochastic Reward', alpha=0.5)
-    plt.plot(hra_training_greedy_rewards_aggregate / args.num_models, color='blue', label='Greedy Reward', alpha=0.5)
+    plt.plot(hra_training_greedy_rewards_aggregate / args.num_models, color='green', label='Greedy Reward', alpha=0.5)
     plt.title(f'HRA Reinforce ({args.effective_horizon} Compute Units)')
     plt.xlabel('Episode')
     plt.ylabel('Reward (Averaged Across Experiments)')
