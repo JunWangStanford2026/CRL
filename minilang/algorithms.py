@@ -87,9 +87,6 @@ def hra_reinforce(num_blocks, block_size, model, alpha=0.1, num_reward_component
         for head in range(num_reward_components):
             reward_by_head[:, head, head * block_size : (head + 1) * block_size] = reward[:, head * block_size : (head + 1) * block_size]
 
-        # log_prob_numpy = log_prob.clone().detach().cpu().numpy() # (B, N)
-        # reward_by_head = reward_by_head - alpha * log_prob_numpy
-
         baselined_reward = reward_by_head - ((np.sum(reward_by_head, axis=0, keepdims=True) - reward_by_head) / (batch_size - 1))
         baselined_reward = torch.tensor(baselined_reward, dtype=torch.float, requires_grad=False).to(device)
         loss = -torch.sum(baselined_reward * log_prob.to(device)) # negative for gradient descent
