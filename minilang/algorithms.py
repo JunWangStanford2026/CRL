@@ -63,7 +63,7 @@ def grpo_reinforce(num_blocks, block_size, model, num_episodes=1000, lr=0.001, b
     return rewards, greedy_rewards
 
 
-def hra_reinforce(num_blocks, block_size, model, alpha=0.1, num_reward_components=2, batch_size=32, num_episodes=1000, lr=3e-4):
+def hra_reinforce(num_blocks, block_size, model, alpha=0.1, num_reward_components=2, batch_size=32, num_episodes=1000, lr=1e-4):
     '''
     Update rule: per reward component, theta += lr * (reward - GRPO Baseline) * grad(log_prob(response))
     returns: a list of rewards obtained in each episode, greedy and stochastic

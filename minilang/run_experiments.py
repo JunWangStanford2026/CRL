@@ -95,7 +95,7 @@ def main(args):
     for _ in tqdm(range(args.num_models)):
         hra_model = MiniLMHRA(vocab_size=args.num_blocks * args.block_size + 1, embedding_dim=12, hidden_dim=12, num_output_heads=2).to(device)
         hra_training_rewards, hra_training_greedy_rewards = hra_reinforce(num_blocks=args.num_blocks, block_size=args.block_size, batch_size=32,
-                                                                          model=hra_model, num_reward_components=2, num_episodes=args.effective_horizon, lr=3e-4)
+                                                                          model=hra_model, num_reward_components=2, num_episodes=args.effective_horizon, lr=1e-4)
         hra_training_rewards_aggregate += np.array(hra_training_rewards)
         hra_training_greedy_rewards_aggregate += np.array(hra_training_greedy_rewards)
         hra_models.append(hra_model)
