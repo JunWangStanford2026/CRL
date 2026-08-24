@@ -6,6 +6,7 @@ def main(args):
     horizons = []
     vanilla_means, vanilla_stds = [], []
     grpo_means, grpo_stds = [], []
+    hra_means, hra_stds = [], []
     compositional_means, compositional_stds = [], []
 
     horizon = args.min_horizon
@@ -21,6 +22,11 @@ def main(args):
         grpo_rewards = np.mean(grpo_data, axis=1)
         grpo_means.append(np.mean(grpo_rewards))
         grpo_stds.append(np.std(grpo_rewards))
+
+        hra_data = np.load(f"minilang/results/{horizon}_compute_units/hra_rewards.npy")
+        hra_rewards = np.mean(hra_data, axis=1)
+        hra_means.append(np.mean(hra_rewards))
+        hra_stds.append(np.std(hra_rewards))
 
         compositional_data = np.load(f"minilang/results/{horizon}_compute_units/compositional_rewards.npy")
         compositional_rewards = np.mean(compositional_data, axis=1)
@@ -47,6 +53,15 @@ def main(args):
         fmt='-o',
         capsize=4,
         label='GRPO Reinforce'
+    )
+
+    plt.errorbar(
+        horizons,
+        hra_means,
+        yerr=hra_stds,
+        fmt='-o',
+        capsize=4,
+        label='HRA Reinforce'
     )
 
     plt.errorbar(
